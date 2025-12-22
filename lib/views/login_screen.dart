@@ -153,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               counterText: '',
-                              helperText: '8 dígitos',
+                              helperText: 'Ingresa solo tu DNI (8 dígitos)',
                               helperStyle: TextStyle(
                                 fontSize: 12,
                                 color: theme.colorScheme.onSurface.withOpacity(0.4),

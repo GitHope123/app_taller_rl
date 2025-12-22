@@ -10,19 +10,33 @@ import 'login_screen.dart';
 import '../theme/theme.dart';
 import 'package:intl/intl.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
     final user = provider.currentUser;
     final theme = Theme.of(context);
-
-    // Refresh automatically if empty & no error
-    if (provider.misAsignaciones.isEmpty && !provider.isLoading && provider.errorMessage == null) {
-      // Avoid loop, check logic in provider usually
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -32,30 +46,43 @@ class HomeScreen extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(2), // Space for border
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: theme.colorScheme.onSurface.withOpacity(0.1),
                     width: 1,
                   ),
-                  color: theme.colorScheme.surface, // Background to ensure transparency doesn't look weird
+                  color: theme.colorScheme.surface,
                 ),
-                child: ClipOval(
-                  child: const AppLogoSquare(size: 36, isMain: false),
+                child: const ClipOval(
+                  child: AppLogoSquare(size: 32, isMain: false),
                 ),
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hola, ${user?.nombre.split(' ')[0] ?? ''} ${user?.apellidos.split(' ')[0] ?? ''}', 
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Tus tareas asignadas', style: theme.textTheme.bodyMedium),
-                ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Hola, ${user?.nombre.split(' ')[0] ?? ''} ${user?.apellidos.split(' ')[0] ?? ''}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tus tareas asignadas',
+                      style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -66,7 +93,7 @@ class HomeScreen extends StatelessWidget {
             child: Row(
               children: [
                 IconButton.filledTonal(
-                  onPressed: () => provider.fetchMisDatos(), 
+                  onPressed: () => provider.fetchMisDatos(),
                   icon: const Icon(Icons.refresh),
                 ),
                 const SizedBox(width: 8),
@@ -74,9 +101,9 @@ class HomeScreen extends StatelessWidget {
                   onPressed: () {
                     provider.logout();
                     Navigator.pushAndRemoveUntil(
-                      context, 
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (r) => false
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            (r) => false
                     );
                   },
                   icon: const Icon(Icons.logout_rounded, color: errorColor),
@@ -87,47 +114,196 @@ class HomeScreen extends StatelessWidget {
           )
         ],
       ),
-      body: provider.isLoading && provider.misAsignaciones.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => provider.fetchMisDatos(),
-              child: provider.misAsignaciones.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.assignment_turned_in_outlined, size: 80, color: theme.colorScheme.onSurface.withOpacity(0.2)),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Todo listo por ahora',
-                            style: theme.textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No tienes operaciones pendientes asignadas.',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                      itemCount: provider.misAsignaciones.length,
-                      separatorBuilder: (_,__) => const SizedBox(height: 12),
-                      itemBuilder: (ctx, i) {
-                        final item = provider.misAsignaciones[i];
-                        return FadeInUp(
-                          duration: const Duration(milliseconds: 600),
-                          delay: Duration(milliseconds: i * 100),
-                          child: AssignmentCard(
-                            key: ValueKey(item.id),
-                            asignacion: item
-                          ),
-                        );
-                      },
-                    ),
+      body: Column(
+        children: [
+          // TabBar
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
             ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: theme.colorScheme.primary,
+              unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
+              indicatorColor: theme.colorScheme.primary,
+              indicatorWeight: 3,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+              tabs: const [
+                Tab(
+                  icon: Icon(Icons.pending_actions_outlined),
+                  text: 'Por Realizar',
+                ),
+                Tab(
+                  icon: Icon(Icons.task_alt_outlined),
+                  text: 'Tareas Hechas',
+                ),
+              ],
+            ),
+          ),
+          // TabBarView
+          Expanded(
+            child: provider.isLoading && provider.misAsignaciones.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+              controller: _tabController,
+              children: [
+                // Tab 1: Por Realizar
+                _buildTaskList(
+                  context,
+                  provider,
+                  theme,
+                  isPending: true,
+                ),
+                // Tab 2: Tareas Hechas
+                _buildTaskList(
+                  context,
+                  provider,
+                  theme,
+                  isPending: false,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildTaskList(
+      BuildContext context,
+      AppProvider provider,
+      ThemeData theme, {
+        required bool isPending,
+      }) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _getFilteredAsignaciones(provider.misAsignaciones, isPending),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final filteredAsignaciones = snapshot.data ?? [];
+
+        if (filteredAsignaciones.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: () => provider.fetchMisDatos(),
+            child: ListView(
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isPending
+                            ? Icons.assignment_turned_in_outlined
+                            : Icons.celebration_outlined,
+                        size: 64,
+                        color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        isPending
+                            ? 'Todo listo por ahora'
+                            : 'Aún no hay tareas completadas',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          isPending
+                              ? 'No tienes operaciones pendientes asignadas.'
+                              : 'Las tareas completadas aparecerán aquí.',
+                          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => provider.fetchMisDatos(),
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            itemCount: filteredAsignaciones.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (ctx, i) {
+              final item = filteredAsignaciones[i]['asignacion'] as Asignacion;
+              return FadeInUp(
+                duration: const Duration(milliseconds: 600),
+                delay: Duration(milliseconds: i * 100),
+                child: AssignmentCard(
+                  key: ValueKey(item.id),
+                  asignacion: item,
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _getFilteredAsignaciones(
+      List<Asignacion> asignaciones,
+      bool isPending,
+      ) async {
+    final dataService = DataService();
+    final List<Map<String, dynamic>> result = [];
+
+    for (final asignacion in asignaciones) {
+      try {
+        final cantidadTrabajada = await dataService.getCantidadTrabajada(asignacion.id);
+        final cantidadAsignada = asignacion.cantidad.toDouble();
+        final cantidadRestante = cantidadAsignada - cantidadTrabajada;
+        final isCompleted = cantidadRestante <= 0;
+
+        // Filtrar según el tab
+        if (isPending && !isCompleted) {
+          result.add({
+            'asignacion': asignacion,
+            'cantidadTrabajada': cantidadTrabajada,
+          });
+        } else if (!isPending && isCompleted) {
+          result.add({
+            'asignacion': asignacion,
+            'cantidadTrabajada': cantidadTrabajada,
+          });
+        }
+      } catch (e) {
+        // Si hay error, incluir en pendientes por defecto
+        if (isPending) {
+          result.add({
+            'asignacion': asignacion,
+            'cantidadTrabajada': 0.0,
+          });
+        }
+      }
+    }
+
+    return result;
   }
 }
 
@@ -186,7 +362,7 @@ class _AssignmentCardState extends State<AssignmentCard> {
     final cantidadAsignada = widget.asignacion.cantidad.toDouble();
     final cantidadRestante = cantidadAsignada - cantidadTrabajada;
     final isCompleted = cantidadRestante <= 0;
-    
+
     String dateStr = widget.asignacion.fecha;
     try {
       final date = DateTime.parse(widget.asignacion.fecha);
@@ -195,9 +371,9 @@ class _AssignmentCardState extends State<AssignmentCard> {
       final yesterday = today.subtract(const Duration(days: 1));
       final dateOnly = DateTime(date.year, date.month, date.day);
       final difference = today.difference(dateOnly).inDays;
-      
+
       final timeStr = DateFormat('h:mm a').format(date);
-      
+
       if (dateOnly == today) {
         dateStr = 'Hoy, $timeStr';
       } else if (dateOnly == yesterday) {
@@ -206,8 +382,8 @@ class _AssignmentCardState extends State<AssignmentCard> {
         dateStr = 'Hace $difference día${difference > 1 ? 's' : ''}';
       } else {
         // Formato: "10 dic"
-        final months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 
-                       'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        final months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+          'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
         dateStr = '${date.day} ${months[date.month - 1]}';
       }
     } catch (_) {}
@@ -216,8 +392,8 @@ class _AssignmentCardState extends State<AssignmentCard> {
       opacity: isCompleted ? 0.5 : 1.0,
       child: Container(
         decoration: BoxDecoration(
-          color: isCompleted 
-              ? theme.cardTheme.color?.withOpacity(0.6) 
+          color: isCompleted
+              ? theme.cardTheme.color?.withOpacity(0.6)
               : theme.cardTheme.color,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
@@ -228,9 +404,9 @@ class _AssignmentCardState extends State<AssignmentCard> {
             ),
           ],
           border: Border.all(
-            color: isCompleted 
-                ? theme.colorScheme.outline.withOpacity(0.3)
-                : theme.colorScheme.outline.withOpacity(0.5)
+              color: isCompleted
+                  ? theme.colorScheme.outline.withOpacity(0.3)
+                  : theme.colorScheme.outline.withOpacity(0.5)
           ),
         ),
         child: Material(
@@ -239,14 +415,16 @@ class _AssignmentCardState extends State<AssignmentCard> {
             borderRadius: BorderRadius.circular(20),
             onTap: isCompleted ? null : () async {
               final result = await Navigator.push(
-                 context,
-                 MaterialPageRoute(builder: (_) => WorkRegisterScreen(asignacion: widget.asignacion)),
-               );
-               if (result == true) {
-                 _loadCantidadTrabajada();
-                 // También forzamos actualización del provider para que otros widgets se enteren
-                 Provider.of<AppProvider>(context, listen: false).fetchMisDatos();
-               }
+                context,
+                MaterialPageRoute(builder: (_) => WorkRegisterScreen(asignacion: widget.asignacion)),
+              );
+              if (result == true && mounted) {
+                _loadCantidadTrabajada();
+                // También forzamos actualización del provider para que otros widgets se enteren
+                if (mounted) {
+                  Provider.of<AppProvider>(context, listen: false).fetchMisDatos();
+                }
+              }
             },
             child: Padding(
               padding: const EdgeInsets.all(20.0),
@@ -259,15 +437,15 @@ class _AssignmentCardState extends State<AssignmentCard> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isCompleted 
-                              ? theme.colorScheme.surfaceVariant.withOpacity(0.5)
+                          color: isCompleted
+                              ? theme.colorScheme.surfaceContainerHighest.withOpacity(0.5)
                               : theme.colorScheme.primary.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          isCompleted ? Icons.check_circle_outline : Icons.handyman_outlined, 
-                          color: isCompleted 
-                              ? theme.colorScheme.onSurfaceVariant 
+                          isCompleted ? Icons.check_circle_outline : Icons.handyman_outlined,
+                          color: isCompleted
+                              ? theme.colorScheme.onSurfaceVariant
                               : theme.colorScheme.primary,
                           size: 24,
                         ),
@@ -280,34 +458,41 @@ class _AssignmentCardState extends State<AssignmentCard> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                 Row(
-                                   children: [
-                                     Text(
-                                      pedCode,
-                                      style: theme.textTheme.labelLarge?.copyWith(
-                                        color: theme.colorScheme.secondary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.secondaryContainer,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'Sec. $secuencia',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: theme.colorScheme.onSecondaryContainer,
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          pedCode,
+                                          style: theme.textTheme.labelLarge?.copyWith(
+                                            color: theme.colorScheme.secondary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                    ),
-                                   ],
-                                 ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.secondaryContainer,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'Sec. $secuencia',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: theme.colorScheme.onSecondaryContainer,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
@@ -316,11 +501,11 @@ class _AssignmentCardState extends State<AssignmentCard> {
                                     border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
                                   ),
                                   child: Text(
-                                    dateStr, 
-                                    style: TextStyle(
-                                      fontSize: 11, 
-                                      color: theme.colorScheme.onSurface.withOpacity(0.6)
-                                    )
+                                      dateStr,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: theme.colorScheme.onSurface.withOpacity(0.6)
+                                      )
                                   ),
                                 )
                               ],
@@ -328,11 +513,13 @@ class _AssignmentCardState extends State<AssignmentCard> {
                             const SizedBox(height: 6),
                             Text(
                               opName,
-                              style: theme.textTheme.titleLarge?.copyWith(
+                              style: theme.textTheme.titleMedium?.copyWith(
                                 height: 1.2,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize: 16,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -347,23 +534,23 @@ class _AssignmentCardState extends State<AssignmentCard> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildInfoBadge(
-                          context, 
-                          'Asignado', 
-                          '${cantidadAsignada.toStringAsFixed(0)}', 
+                          context,
+                          'Asignado',
+                          '${cantidadAsignada.toStringAsFixed(0)}',
                           Icons.assignment_outlined,
                           theme.colorScheme.primary,
                         ),
                         _buildInfoBadge(
-                          context, 
-                          'Trabajado', 
-                          '${cantidadTrabajada.toStringAsFixed(0)}', 
+                          context,
+                          'Trabajado',
+                          '${cantidadTrabajada.toStringAsFixed(0)}',
                           Icons.done_all_outlined,
                           theme.colorScheme.tertiary,
                         ),
                         _buildInfoBadge(
-                          context, 
-                          'Falta', 
-                          '${cantidadRestante > 0 ? cantidadRestante.toStringAsFixed(0) : '0'}', 
+                          context,
+                          'Falta',
+                          '${cantidadRestante > 0 ? cantidadRestante.toStringAsFixed(0) : '0'}',
                           Icons.pending_outlined,
                           isCompleted ? theme.colorScheme.outline : theme.colorScheme.error,
                         ),
@@ -375,32 +562,34 @@ class _AssignmentCardState extends State<AssignmentCard> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                        backgroundColor: isCompleted 
-                            ? theme.colorScheme.surfaceVariant 
+                        backgroundColor: isCompleted
+                            ? theme.colorScheme.surfaceContainerHighest
                             : theme.colorScheme.primary,
-                        foregroundColor: isCompleted 
-                            ? theme.colorScheme.onSurfaceVariant 
+                        foregroundColor: isCompleted
+                            ? theme.colorScheme.onSurfaceVariant
                             : theme.colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: isCompleted ? null : () async {
-                         final result = await Navigator.push(
-                           context,
-                           MaterialPageRoute(builder: (_) => WorkRegisterScreen(asignacion: widget.asignacion)),
-                         );
-                         if (result == true) {
-                           _loadCantidadTrabajada();
-                           // Actualizar globalmente también
-                           Provider.of<AppProvider>(context, listen: false).fetchMisDatos();
-                         }
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => WorkRegisterScreen(asignacion: widget.asignacion)),
+                        );
+                        if (result == true && mounted) {
+                          _loadCantidadTrabajada();
+                          // Actualizar globalmente también
+                          if (mounted) {
+                            Provider.of<AppProvider>(context, listen: false).fetchMisDatos();
+                          }
+                        }
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            isCompleted ? Icons.check_circle : Icons.edit_outlined, 
-                            size: 18
+                              isCompleted ? Icons.check_circle : Icons.edit_outlined,
+                              size: 18
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -428,21 +617,21 @@ class _AssignmentCardState extends State<AssignmentCard> {
         Icon(icon, size: 18, color: color),
         const SizedBox(height: 4),
         Text(
-          label.toUpperCase(), 
-          style: TextStyle(
-            fontSize: 9, 
-            letterSpacing: 0.5, 
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
-            fontWeight: FontWeight.w500,
-          )
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 9,
+              letterSpacing: 0.5,
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
+              fontWeight: FontWeight.w500,
+            )
         ),
         const SizedBox(height: 2),
         Text(
-          value, 
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: color,
-          )
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: color,
+            )
         ),
       ],
     );
