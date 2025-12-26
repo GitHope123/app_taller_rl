@@ -40,9 +40,17 @@ El proyecto está construido utilizando prácticas modernas de desarrollo móvil
 
 ¡Descarga la última versión de la aplicación y comienza a usarla ahora mismo!
 
-[![Descargar APK](https://img.shields.io/badge/Android-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](./app-release.apk)
 
 > **Nota**: Asegúrate de habilitar "Instalar de orígenes desconocidos" en tu dispositivo Android si es necesario.
+
+---
+
+## 📅 Historial de Actualizaciones
+
+| Versión | Fecha | Cambios Principales | Descarga |
+|:---:|:---:|:---|:---:|
+| **v1.0.0** | 26/12/2024 | • Lanzamiento inicial<br>• Gestión de Pedidos y Operaciones<br>• Registro de Avance<br>• Modo Oscuro/Claro | [Descargar APK (Arm64)](./releases/app-release-v1.0.0.apk) |
+
 
 ---
 
