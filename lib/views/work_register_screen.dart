@@ -18,6 +18,7 @@ class _WorkRegisterScreenState extends State<WorkRegisterScreen> {
   final _quantityController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   double _cantidadTrabajada = 0.0;
+  double? _limitByPrecondition;
   bool _isLoadingData = true;
 
   @override
@@ -29,9 +30,19 @@ class _WorkRegisterScreenState extends State<WorkRegisterScreen> {
   Future<void> _loadProgress() async {
     final provider = Provider.of<AppProvider>(context, listen: false);
     final trab = await provider.getCantidadTrabajada(widget.asignacion.id);
+    
+    double? preLimit;
+    if (widget.asignacion.pedido != null && widget.asignacion.operacion != null) {
+        preLimit = await provider.getPreconditionLimit(
+          widget.asignacion.pedido!.id, 
+          widget.asignacion.operacion!.nombre
+        );
+    }
+
     if (mounted) {
       setState(() {
         _cantidadTrabajada = trab;
+        _limitByPrecondition = preLimit;
         _isLoadingData = false;
       });
     }
@@ -47,7 +58,23 @@ class _WorkRegisterScreenState extends State<WorkRegisterScreen> {
     final pedDesc = widget.asignacion.pedido?.descripcion ?? '';
     
     final cantidadAsignada = widget.asignacion.cantidad;
-    final cantidadRestante = (cantidadAsignada - _cantidadTrabajada).clamp(0, double.infinity);
+    
+    // Determine effective limit: Min(Assigned, PreconditionLimit if exists)
+    double effectiveLimit = cantidadAsignada.toDouble();
+    bool restrictedByPrecondition = false;
+    
+    if (_limitByPrecondition != null) {
+      // If precondition says we have done X amount in previous step, 
+      // we generally can't do more than X in this step (assuming 1:1 ratio).
+      // Or if the view returns the 'capped amount available', we use it.
+      // Assuming 'cantidad_trabajada_precondicion' is the TOTAL MAX allowed.
+      if (_limitByPrecondition! < effectiveLimit) {
+        effectiveLimit = _limitByPrecondition!;
+        restrictedByPrecondition = true;
+      }
+    }
+
+    final cantidadRestante = (effectiveLimit - _cantidadTrabajada).clamp(0, double.infinity);
 
     return Scaffold(
       appBar: AppBar(
@@ -183,7 +210,10 @@ class _WorkRegisterScreenState extends State<WorkRegisterScreen> {
                             return 'Cantidad inválida';
                           }
                           if (v > cantidadRestante) {
-                            return 'Excede lo restante ($cantidadRestante)';
+                             if (restrictedByPrecondition) {
+                               return 'Limitado por precondición ($cantidadRestante disp.)';
+                             }
+                             return 'Excede lo restante ($cantidadRestante)';
                           }
                           return null;
                         },

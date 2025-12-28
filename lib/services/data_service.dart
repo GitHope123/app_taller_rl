@@ -61,4 +61,34 @@ class DataService {
       return 0.0;
     }
   }
+
+  // Verificar la cantidad límite permitida por la precondición
+  Future<double?> getPreconditionLimit(String orderId, String operationName) async {
+    try {
+      // NOTE: Using column names exactly as provided by user: 'operación_principal', 'cantidad_trabajada_precondicion'
+      final response = await _supabase
+          .from('vw_precondiciones_cumplimiento')
+          .select('cantidad_trabajada_precondicion')
+          .eq('id_pedido', orderId)
+          .eq('operación_principal', operationName);
+
+      final List<dynamic> rows = response as List<dynamic>;
+      
+      if (rows.isEmpty) return null; // No applicable preconditions found
+      
+      // Find the restrictive limit (min) if multiple preconditions exist
+      double minLimit = double.infinity;
+      for (var row in rows) {
+         final val = (row['cantidad_trabajada_precondicion'] as num).toDouble();
+         if (val < minLimit) {
+           minLimit = val;
+         }
+      }
+      
+      return minLimit == double.infinity ? null : minLimit;
+    } catch (e) {
+      print('Error checking precondition limit: $e');
+      return null;
+    }
+  }
 }

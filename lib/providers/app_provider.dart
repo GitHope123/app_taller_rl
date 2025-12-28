@@ -83,11 +83,17 @@ class AppProvider with ChangeNotifier {
   Future<bool> registrarAvance(String idAsignacion, double cantidad) async {
     setLoading(true);
     try {
-      // Calcular pago aqui si tenemos la tarifa, o enviar 0 y que el backend resuelva.
-      // Buscamos la asignacion para saber el precio si lo tuvieramos, pero el modelo actual
-      // no tiene el precio de la operacion explícito en OperacionPedido (solo minutos).
-      // Asumiremos que el backend o DB calcula el monto.
-      await _dataService.registrarAvance(idAsignacion, cantidad, 0.0);
+      // Calculate payment: quantity * minutes_per_unit
+      double pagoCalculado = 0.0;
+      try {
+        final asignacion = _misAsignaciones.firstWhere((a) => a.id == idAsignacion);
+        final minutos = asignacion.operacion?.minutosUnidad ?? 0;
+        pagoCalculado = cantidad * minutos;
+      } catch (e) {
+         print('Warning: Could not calculate payment locally: $e');
+      }
+
+      await _dataService.registrarAvance(idAsignacion, cantidad, pagoCalculado);
       
       // Recargar datos para actualizar estado si fuera necesario (ej. progreso)
       await fetchMisDatos();
@@ -102,5 +108,9 @@ class AppProvider with ChangeNotifier {
   
   Future<double> getCantidadTrabajada(String idAsignacion) async {
     return await _dataService.getCantidadTrabajada(idAsignacion);
+  }
+
+  Future<double?> getPreconditionLimit(String orderId, String operationName) async {
+    return await _dataService.getPreconditionLimit(orderId, operationName);
   }
 }
